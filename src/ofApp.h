@@ -21,6 +21,10 @@
 //  
 //  (c) Kevin M. Smith  - 24 September 2018
 //
+//  Student: Luis Pamintuan 
+//  Date: 11/17/18
+//
+//
 #pragma once
 
 #include "ofMain.h"
