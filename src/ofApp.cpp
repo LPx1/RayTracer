@@ -134,8 +134,7 @@ void ofApp::rayTrace() {
 				/*Calculates Lambert and Phong shading
 					Sum of all lights is calculated inside each shading function*/
 
-				ofColor colo = lambert(holdP, holdN, difCol)
-					+  phong(holdP,holdN,difCol,specCol,phongPower);
+				ofColor colo = (difCol * 0.2) + lambert(holdP, holdN, difCol) + phong(holdP,holdN,difCol,specCol,phongPower);
 
 				img.setColor(i, imageHeight - j - 1, colo);
 
@@ -149,6 +148,16 @@ void ofApp::rayTrace() {
 	}
 	img.save("test.jpg");
 
+}
+// Calculate ambient shading 
+//
+ofColor ofApp::ambient(const ofColor ambient) {
+	ofColor shading = (0,0,0);
+	for (int i = 0; i < lights.size(); i++) {
+		shading += ofFloatColor(ambient * lights[i]->intensity);
+	}
+
+	return shading;
 }
 // Calculates Lambert Shading
 // p being the point of intersection, norm is the normal and
@@ -239,18 +248,19 @@ void ofApp::setup() {
 	//Gui Setup
 	gui.setup();
 	gui.add(powSlider.setup("Phong Power Value",10, 1, 10000));
-	gui.add(intenSlider1.setup("Light 1 insensity", 1, .001, 10));
-	gui.add(intenSlider2.setup("Light 2 insensity", 1, .001, 10));
+	gui.add(intenSlider1.setup("Light 1 insensity", .5, 0, 10));
+	gui.add(intenSlider2.setup("Light 2 insensity", .5, 0, 10));
 
 	//Create scene objects 
 	scene.push_back(new Sphere (glm::vec3(2, -1, 0), 1.0, ofColor::gold));
-	scene.push_back(new Sphere (glm::vec3(-1, 0, -5), 2.0, ofColor::cadetBlue));
-	scene.push_back(new Sphere(glm::vec3(4, 0, -4), 2.0, ofColor::orangeRed));
-	scene.push_back(new Sphere(glm::vec3(-1, -1, -1), 1.0, ofColor::darkBlue));
-	scene.push_back(new Sphere(glm::vec3(-5, 0, -5), 2.0, ofColor::maroon));
+	scene.push_back(new Sphere (glm::vec3(-1, 0, -5), 2.0, ofColor::darkBlue));
+	scene.push_back(new Sphere(glm::vec3(4, 0, -4), 2.0, ofColor::crimson));
+//	scene.push_back(new Sphere(glm::vec3(-1, -1, -1), 1.0, ofColor::darkBlue));
+	scene.push_back(new Sphere(glm::vec3(-5, 0, -5), 2.0, ofColor::yellowGreen));
     scene.push_back(new Plane(glm::vec3(0, -2, 0), glm::vec3(0, 1, 0)));
-	lights.push_back(new Light(glm::vec3(0, 3, 10), 0.1 , intensity1 , ofColor::white));
-	lights.push_back(new Light(glm::vec3(10, 2, 5), 0.1, intensity2, ofColor::white));
+	lights.push_back(new Light(glm::vec3(0, 4, 10), 0.1 , intensity1 , ofColor::white));
+//	lights.push_back(new Light(glm::vec3(0, 5, 0), 0.1, intensity2, ofColor::white));
+	lights.push_back(new Light(glm::vec3(8, 4, 10), 0.1, intensity2, ofColor::white));
 
 }
 

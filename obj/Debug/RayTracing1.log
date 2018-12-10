@@ -1,4 +1,12 @@
-﻿  RayTracing1.vcxproj -> C:\Users\asian\Desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myApps\RayTracing1\bin\RayTracing1_debug.exe
+﻿  ofApp.cpp
+c:\users\asian\desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myapps\raytracing1\src\ofapp.cpp(110): warning C4018: '<': signed/unsigned mismatch
+c:\users\asian\desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myapps\raytracing1\src\ofapp.cpp(156): warning C4018: '<': signed/unsigned mismatch
+c:\users\asian\desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myapps\raytracing1\src\ofapp.cpp(177): warning C4018: '<': signed/unsigned mismatch
+c:\users\asian\desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myapps\raytracing1\src\ofapp.cpp(187): warning C4018: '<': signed/unsigned mismatch
+c:\users\asian\desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myapps\raytracing1\src\ofapp.cpp(216): warning C4018: '<': signed/unsigned mismatch
+c:\users\asian\desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myapps\raytracing1\src\ofapp.cpp(281): warning C4018: '<': signed/unsigned mismatch
+c:\users\asian\desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myapps\raytracing1\src\ofapp.cpp(286): warning C4018: '<': signed/unsigned mismatch
+  RayTracing1.vcxproj -> C:\Users\asian\Desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myApps\RayTracing1\bin\RayTracing1_debug.exe
   
   	                   2	C:\Users\asian\Desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\libs\fmodex\lib\vs\Win32\
   	  *EXTRA File 		 5647872	C:\Users\asian\Desktop\of_v0.10.0_vs2017_release\of_v0.10.0_vs2017_release\apps\myApps\RayTracing1\bin\FreeImage.dll
