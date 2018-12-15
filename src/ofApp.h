@@ -45,15 +45,103 @@ public:
 class SceneObject {
 public:
 	virtual void draw() = 0;    // pure virtual funcs - must be overloaded
-	virtual bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) { cout << "SceneObject::intersect" << endl; return false; }
+	virtual bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) { return false; }
 
-	// any data common to all scene objects goes here
-	glm::vec3 position = glm::vec3(0, 0, 0);
+	// commonly used transformations
+	//
+	glm::mat4 getRotateMatrix() {
+		return (glm::eulerAngleYXZ(glm::radians(rotation.y), glm::radians(rotation.x), glm::radians(rotation.z)));   // yaw, pitch, roll 
+	}
+	glm::mat4 getTranslateMatrix() {
+		return (glm::translate(glm::mat4(1.0), glm::vec3(position.x, position.y, position.z)));
+	}
+	glm::mat4 getScaleMatrix() {
+		return (glm::scale(glm::mat4(1.0), glm::vec3(scale.x, scale.y, scale.z)));
+	}
+
+
+	glm::mat4 getLocalMatrix() {
+
+		// get the local transformations + pivot
+		//
+		glm::mat4 scale = getScaleMatrix();
+		glm::mat4 rotate = getRotateMatrix();
+		glm::mat4 trans = getTranslateMatrix();
+
+		// handle pivot point  (rotate around a point that is not the object's center)
+		//
+		glm::mat4 pre = glm::translate(glm::mat4(1.0), glm::vec3(-pivot.x, -pivot.y, -pivot.z));
+		glm::mat4 post = glm::translate(glm::mat4(1.0), glm::vec3(pivot.x, pivot.y, pivot.z));
+
+
+
+		return (trans * post * rotate * pre * scale);
+
+	}
+
+	glm::mat4 getMatrix() {
+
+		// if we have a parent (we are not the root),
+		// concatenate parent's transform (this is recursive)
+		// 
+		if (parent) {
+			glm::mat4 M = parent->getMatrix();
+			return (M * getLocalMatrix());
+		}
+		else return getLocalMatrix();  // priority order is SRT
+	}
+
+	// get current Position in World Space
+	//
+	glm::vec3 getPosition() {
+		return (getMatrix() * glm::vec4(0.0, 0.0, 0.0, 1.0));
+	}
+
+	// set position (pos is in world space)
+	//
+	void setPosition(glm::vec3 pos) {
+		position = glm::inverse(getMatrix()) * glm::vec4(pos, 1.0);
+	}
+
+	// return a rotation  matrix that rotates one vector to another
+	//
+	glm::mat4 rotateToVector(glm::vec3 v1, glm::vec3 v2)
+	{
+
+		glm::vec3 axis = glm::cross(v1, v2);
+		glm::quat q = glm::angleAxis(glm::angle(v1, v2), glm::normalize(axis));
+		return glm::toMat4(q);
+	}
+
+	//  Hierarchy 
+	//
+	void addChild(SceneObject *child) {
+		childList.push_back(child);
+		child->parent = this;
+	}
+
+	SceneObject *parent = NULL;        // if parent = NULL, then this obj is the ROOT
+	vector<SceneObject *> childList;
+
+	// position/orientation 
+	//
+	glm::vec3 position = glm::vec3(0, 0, 0);   // translate
+	glm::vec3 rotation = glm::vec3(0, 0, 0);   // rotate
+	glm::vec3 scale = glm::vec3(1, 1, 1);      // scale
+
+	// rotate pivot
+	//
+	glm::vec3 pivot = glm::vec3(0, 0, 0);
 
 	// material properties (we will ultimately replace this with a Material class - TBD)
 	//
 	ofColor diffuseColor = ofColor::grey;    // default colors - can be changed.
 	ofColor specularColor = ofColor::lightGray;
+
+	// UI parameters
+	//
+	bool isSelectable = true;
+	string name = "SceneObject";
 };
 
 //  General purpose sphere  (assume parametric)
@@ -86,6 +174,9 @@ public:
 	Light(glm::vec3 p, float r, float inten, ofColor diffuse = ofColor::white) { position = p; radius = r; diffuseColor = diffuse; intensity = inten; }
 	Light() {}
 	 
+	bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) {
+		return (glm::intersectRaySphere(ray.p, ray.d, position, radius, point, normal));
+	}
 	void draw() {
 		ofDrawSphere(position, radius);
 	}
@@ -105,9 +196,13 @@ public:
 		width = w;
 		height = h;
 		diffuseColor = diffuse;
+		isSelectable = false;
 		plane.rotateDeg(90, 1, 0, 0);
 	}
-	Plane() { }
+	Plane() {
+		plane.rotateDeg(-90, 1, 0, 0);
+		isSelectable = false;
+	}
 
 	//bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) {
 	//	return (glm::intersectRaySphere(ray.p, ray.d, position, radius, point, normal));
@@ -223,6 +318,8 @@ public:
 	void rayTrace();
 	void drawGrid();
 	void drawAxis(glm::vec3 position);
+	bool objSelected() { return (selected.size() ? true : false); };
+	bool ofApp::mouseToDragPlane(int x, int y, glm::vec3 &point);
 //	float dotProduct(glm::vec3 lighting, glm::vec3 norm);
 
 	// Formulas function to help generate shading
@@ -234,7 +331,7 @@ public:
 
 
 
-	bool bHide = true;
+//	bool bHide = true;
 	bool bShowImage = false;
 
 	ofEasyCam  mainCam;
@@ -253,7 +350,20 @@ public:
 	ofImage image;
 
 	vector<SceneObject *> scene;
+	vector<SceneObject *> selected;
 	vector<Light *> lights;
+
+	// state
+	bool bDrag = false;
+	bool bHide = true;
+	bool bAltKeyDown = false;
+	bool bRotateX = false;
+	bool bRotateY = false;
+	bool bRotateZ = false;
+	bool child = false;
+	bool rotation = false;
+	bool playback = false;
+	glm::vec3 lastPoint;
 
 
 	int imageWidth = 1024; //Original 600,400
