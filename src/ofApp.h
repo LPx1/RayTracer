@@ -26,6 +26,8 @@
 #include "ofMain.h"
 #include "ofxGui.h"
 
+#define MAX_RAY_DEPTH 3
+
 //  General Purpose Ray class 
 //
 class Ray {
@@ -191,7 +193,7 @@ public:
 class Plane : public SceneObject {
 public:
 	// Changed natural color of Plane (diffuse)
-	Plane(glm::vec3 p, glm::vec3 n, ofColor diffuse = ofColor::whiteSmoke, float w = 20, float h = 20) {
+	Plane(glm::vec3 p, glm::vec3 n, ofColor diffuse = ofColor::lightSlateGrey, float w = 20, float h = 20) {
 		position = p; normal = n;
 		width = w;
 		height = h;
@@ -316,6 +318,7 @@ public:
 	void dragEvent(ofDragInfo dragInfo);
 	void gotMessage(ofMessage msg);
 	void rayTrace();
+	ofColor trace(const Ray &ray, int depth);
 	void drawGrid();
 	void drawAxis(glm::vec3 position);
 	bool objSelected() { return (selected.size() ? true : false); };
@@ -328,7 +331,7 @@ public:
 	ofColor phong(const glm::vec3 &p, const glm::vec3 &norm, const ofColor diffuse,
 		const ofColor specular, float power);
 	ofColor ambient(const ofColor ambient);
-
+	ofVec3f reflection(const glm::vec3 &dir, const glm::vec3 &norm);
 
 
 //	bool bHide = true;
@@ -373,5 +376,17 @@ public:
 	float intensity2;
 //	int imageWidth = 6;
 //	int imageHeight = 4;
+
+
+
+	float pixelWidth = (float)1 / imageWidth; //pixel Width in relation to UV
+	float pixelHeight = (float)1 / imageHeight; // pixel Height
+	float imageU = pixelWidth / 2;
+	float imageV = pixelHeight / 2; // pixel Height
+
+	ofImage img;
+	vector<Ray> rays;
+	glm::vec3 point, normal; // points of intersection
+
 
 };

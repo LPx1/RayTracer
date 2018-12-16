@@ -19,8 +19,8 @@ void ofApp::setup() {
 	//Gui Setup
 	gui.setup();
 	gui.add(powSlider.setup("Phong Power Value",10, 1, 10000));
-	gui.add(intenSlider1.setup("Light 1 insensity", .5, 0, 10));
-	gui.add(intenSlider2.setup("Light 2 insensity", .5, 0, 10));
+	gui.add(intenSlider1.setup("Light 1 insensity", .5, 0, 1));
+	gui.add(intenSlider2.setup("Light 2 insensity", .5, 0, 1));
 
 	//Create scene objects 
 	scene.push_back(new Sphere (glm::vec3(2, -1, 0), 1.0, ofColor::gold));
@@ -73,7 +73,7 @@ void ofApp::draw() {
 //
 	for (int i = 0; i < scene.size(); i++) {
 		if (objSelected() && scene[i] == selected[0])
-			ofSetColor(ofColor::white);
+			ofSetColor(ofColor::gold);
 		else ofSetColor(scene[i]->diffuseColor);
 		scene[i]->draw();
 
@@ -82,7 +82,7 @@ void ofApp::draw() {
 		for (int j = 0; j < scene[i]->childList.size(); j++)
 		{
 			if (objSelected() && scene[i]->childList[j] == selected[0])
-				ofSetColor(ofColor::white);
+				ofSetColor(ofColor::gold);
 			else ofSetColor(scene[i]->childList[j]->diffuseColor);
 			//scene[i]->childList[j]->draw();
 
@@ -181,16 +181,8 @@ void RenderCam::drawFrustum() {
 
 void ofApp::rayTrace() {
 
-	float pixelWidth = (float)1 / imageWidth; //pixel Width in relation to UV
-	float pixelHeight = (float)1 / imageHeight; // pixel Height
-	float imageU = pixelWidth / 2;
-	float imageV = pixelHeight / 2; // pixel Height
 	phongPower = powSlider;
-
-	ofImage img;
-	vector<Ray> rays;
 	int count = 0;
-	glm::vec3 point, normal; // points of intersection
 	img.allocate(imageWidth, imageHeight, OF_IMAGE_COLOR);
 	// **************************************
 
@@ -200,56 +192,89 @@ void ofApp::rayTrace() {
 		for (int j = 0; j < imageHeight; j++)
 		{
 			Ray x = renderCam.getRay(imageU + (pixelWidth * i), imageV + (pixelHeight * j));
-			int hold = -1;
-			glm::vec3 holdP = glm::vec3(0, 0, 0);
-			glm::vec3 holdN = glm::vec3(0, 0, 0);
+			
+			ofColor rayColor = trace(x, 0);
 
-			float closest = glm::length(INFINITY); //Grabs the closest intersection, sets to infinity to start
-			//Loops through all objects in scene
-			for (int b = 0; b < scene.size(); b++)
-			{
-				// point of intersection - position of the camera = v 
-				// (v being the distance between the point of intersection and the position of the camera
-				bool intersect = scene[b]->intersect(x, point, normal);
-				float  distance = glm::length(point - renderCam.position);
-
-				//Checks for the closest object
-				if (intersect == true && distance < closest)
-				{
-					hold = b;
-					holdP = point;
-					holdN = normal;
-					closest = distance;
-
-					//ofDrawSphere(point, 1); // For testing intersection on objects 
-				}
-			}
-
-			//If ray intersects an object then color it in with the closest objects color otherwise
-			if (hold > -1)
-			{
-				//img.setColor(i, imageHeight - j - 1, scene[hold]->diffuseColor);
-				ofColor difCol = scene[hold]->diffuseColor;
-				ofColor specCol = scene[hold]->specularColor;
-
-				/*Calculates Lambert and Phong shading
-					Sum of all lights is calculated inside each shading function*/
-
-				ofColor colo = (difCol * 0.2) + lambert(holdP, holdN, difCol) + phong(holdP, holdN, difCol, specCol, phongPower);
-
-				img.setColor(i, imageHeight - j - 1, colo);
-
-
-			}
-			else //If no intersection set the pixel color to black
-			{
-				img.setColor(i, imageHeight - j - 1, COLOR_BACKGROUND);
-			}
+			img.setColor(i, imageHeight - j - 1, rayColor);
 		}
 	}
 	img.save("test.jpg");
 
 }
+
+ofColor ofApp::trace(const Ray &x, int depth) {
+	int hold = -1;
+	glm::vec3 holdP = glm::vec3(0, 0, 0);
+	glm::vec3 holdN = glm::vec3(0, 0, 0);
+
+	float closest = glm::length(INFINITY); //Grabs the closest intersection, sets to infinity to start
+	//Loops through all objects in scene
+	for (int b = 0; b < scene.size(); b++)
+	{
+		// point of intersection - position of the camera = v 
+		// (v being the distance between the point of intersection and the position of the camera
+		bool intersect = scene[b]->intersect(x, point, normal);
+		float  distance = glm::length(point - renderCam.position);
+
+		//Checks for the closest object
+		if (intersect == true && distance < closest)
+		{
+			hold = b;
+			holdP = point;
+			holdN = normal;
+			closest = distance;
+
+			//ofDrawSphere(point, 1); // For testing intersection on objects 
+		}
+	}
+
+	
+	//If ray intersects an object then color it in with the closest objects color otherwise
+	if (hold > -1)
+	{
+		//img.setColor(i, imageHeight - j - 1, scene[hold]->diffuseColor);
+		ofColor difCol = scene[hold]->diffuseColor;
+		ofColor specCol = scene[hold]->specularColor;
+
+		/*Calculates Lambert and Phong shading
+		Sum of all lights is calculated inside each shading function*/
+
+		ofColor colo = (difCol * 0.2);
+
+		colo += lambert(holdP, holdN, difCol);
+
+		colo += phong(holdP, holdN, difCol, specCol, phongPower);
+
+
+		if (depth < MAX_RAY_DEPTH) {
+			ofVec3f reflectP = reflection(x.d, holdN);
+			Ray reflectionRay = Ray(holdP + reflectP * 0.01 , reflectP);
+			colo += 0.8 * trace(reflectionRay, depth + 1);
+		}
+
+
+		return colo;
+
+		//	img.setColor(i, imageHeight - j - 1, colo);
+
+	}
+	else //If no intersection set the pixel color to black
+	{
+		//img.setColor(i, imageHeight - j - 1, COLOR_BACKGROUND);
+		return COLOR_BACKGROUND;
+	}
+	
+
+	return ambient(scene[hold]->diffuseColor);
+		
+}
+
+//Calculates the reflection off a surface 
+ofVec3f ofApp::reflection(const glm::vec3 &dir, const glm::vec3 &norm)
+{
+	return dir - 2 *  norm * glm::dot(dir, norm);
+}
+
 // Calculate ambient shading 
 //
 ofColor ofApp::ambient(const ofColor ambient) {
@@ -279,7 +304,7 @@ ofColor ofApp::lambert(const glm::vec3 &p, const glm::vec3 &norm, const ofColor 
 
 		l = glm::normalize(lights[i]->position - p); // glm::normalize(lights[0]->position - p)
 		n = norm; //Already normalized
-		Ray shadow = Ray(p + glm::vec3(1, 1, 1), l);
+		Ray shadow = Ray(p + glm::vec3(1, 1, 1) * 0.01, l);
 
 		float cos = fmax(0, glm::dot(l, n)); //  fmax(0, (float) glm::dot(l, n))
 		float inten = (lights[i]->intensity / pow(glm::length(l), 2));
@@ -330,13 +355,9 @@ ofColor ofApp::phong(const glm::vec3 &p, const glm::vec3 &norm, const ofColor di
 	return pixelColor;
 }
 
+
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key) {
-
-}
-
-//--------------------------------------------------------------
-void ofApp::keyReleased(int key) {
 	switch (key) {
 	case 'C':
 	case 'c':
@@ -361,9 +382,38 @@ void ofApp::keyReleased(int key) {
 	case OF_KEY_F3: //Switches to previewing what renderCam can see
 		theCam = &previewCam;
 		break;
-	case ' ':
+	case 'R':
+	case 'r':
 		rayTrace();
 		break;
+	case ' ': //Dynamically create new objects for rayTracing
+	{		ofColor colors[10] = { ofColor::blue, ofColor::red, ofColor::green,
+								ofColor::purple, ofColor::gold, ofColor::magenta, 
+	ofColor::teal, ofColor::blueSteel, ofColor::orangeRed, ofColor::oliveDrab };
+
+	srand(time(NULL));
+	int random = (rand() % 10); //Will select a random color from list of colors 
+
+
+	scene.push_back(new Sphere(glm::vec3(0, 0, 0), 1.0, colors[random]));
+	break; 
+	}
+	case OF_KEY_BACKSPACE:
+		for (int i = 0; i < scene.size(); i++) {
+			if (objSelected() && scene[i] == selected[0]) {
+				scene.erase(scene.begin() + i);
+			}
+		}
+		break;
+		
+	}
+}
+
+//--------------------------------------------------------------
+void ofApp::keyReleased(int key) {
+	switch (key) {
+
+
 	}
 }
 
