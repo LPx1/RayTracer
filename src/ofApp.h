@@ -193,7 +193,7 @@ public:
 class Plane : public SceneObject {
 public:
 	// Changed natural color of Plane (diffuse)
-	Plane(glm::vec3 p, glm::vec3 n, ofColor diffuse = ofColor::lightSlateGrey, float w = 20, float h = 20) {
+	Plane(glm::vec3 p, glm::vec3 n, ofColor diffuse, float w = 20, float h = 20) {
 		position = p; normal = n;
 		width = w;
 		height = h;
@@ -344,6 +344,7 @@ public:
 	
 	ofxPanel gui;
 	ofxFloatSlider powSlider;
+	ofxFloatSlider refSlider;
 	ofxFloatSlider intenSlider1;
 	ofxFloatSlider intenSlider2;
 
@@ -369,9 +370,9 @@ public:
 	glm::vec3 lastPoint;
 
 
-	int imageWidth = 1024; //Original 600,400
-	int imageHeight = 768;
+
 	float phongPower;
+	float reflect;
 	float intensity1;
 	float intensity2;
 //	int imageWidth = 6;
@@ -381,6 +382,8 @@ public:
 
 	float pixelWidth = (float)1 / imageWidth; //pixel Width in relation to UV
 	float pixelHeight = (float)1 / imageHeight; // pixel Height
+	int imageWidth = 1024; //Original 600,400
+	int imageHeight = 768;
 	float imageU = pixelWidth / 2;
 	float imageV = pixelHeight / 2; // pixel Height
 

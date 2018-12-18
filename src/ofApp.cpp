@@ -19,6 +19,7 @@ void ofApp::setup() {
 	//Gui Setup
 	gui.setup();
 	gui.add(powSlider.setup("Phong Power Value",10, 1, 10000));
+	gui.add(refSlider.setup("Reflectivity", .8, 0, 1));
 	gui.add(intenSlider1.setup("Light 1 insensity", .5, 0, 1));
 	gui.add(intenSlider2.setup("Light 2 insensity", .5, 0, 1));
 
@@ -28,17 +29,23 @@ void ofApp::setup() {
 	scene.push_back(new Sphere(glm::vec3(4, 0, -4), 2.0, ofColor::crimson));
 //	scene.push_back(new Sphere(glm::vec3(-1, -1, -1), 1.0, ofColor::darkBlue));
 	scene.push_back(new Sphere(glm::vec3(-5, 0, -5), 2.0, ofColor::yellowGreen));
-    scene.push_back(new Plane(glm::vec3(0, -2, 0), glm::vec3(0, 1, 0)));
+    scene.push_back(new Plane(glm::vec3(0, -2, -3), glm::vec3(0, 1, 0),ofColor::lightSlateGray));
+	scene.push_back(new Plane(glm::vec3(0, 8, -3), glm::vec3(0, 1, 0), ofColor::lightSlateGray));
+
+
 	lights.push_back(new Light(glm::vec3(0, 4, 10), 0.1 , intensity1 , ofColor::white));
 //	lights.push_back(new Light(glm::vec3(0, 5, 0), 0.1, intensity2, ofColor::white));
 	lights.push_back(new Light(glm::vec3(8, 4, 10), 0.1, intensity2, ofColor::white));
 
+	float dd = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - .5;
+	printf("%lf", dd);
 }
 
 //--------------------------------------------------------------
 void ofApp::update() {
 	lights[0]->intensity = intenSlider1;
 	lights[1]->intensity = intenSlider2;
+	reflect = refSlider;
 	phongPower = powSlider;
 }
 
@@ -171,9 +178,21 @@ void RenderCam::drawFrustum() {
 			//rays.push_back(getRay(imageU + (pixelWidth * i), imageV + (pixelHeight * j)));
 			//rays[count].draw(20);
 			//count++;
-			Ray test = getRay(imageU + (pixelWidth * i), imageV + (pixelHeight * j));
-			ofSetColor(ofColor::greenYellow);
-			test.draw(20);
+			int n = 3;
+
+			for (int p = 0; p < n - 1; p++)
+			{
+				for (int q = 0; q < n - 1; q++)
+				{
+					float u = imageU + (pixelWidth + p)  / n;
+					float v = imageV + (pixelHeight + q) / n;
+					Ray test = getRay(u,v);
+					ofSetColor(ofColor::greenYellow);
+					test.draw(20);
+				}
+			}
+
+
 		}
 	}
 
@@ -183,17 +202,64 @@ void ofApp::rayTrace() {
 
 	phongPower = powSlider;
 	int count = 0;
+	int n = 4; //Number of rays to draw in pixel n^2
+
 	img.allocate(imageWidth, imageHeight, OF_IMAGE_COLOR);
 	// **************************************
 
+	float r, g, b;
+	r = g = b = 0;
+
+	srand(time(NULL));
+
 	//Run through each pixel at (i,j)
 
-	for (int i = 0; i < imageWidth; i++) {
-		for (int j = 0; j < imageHeight; j++)
+	for (float i = 0; i < imageWidth; i++) {
+		for (float j = 0; j < imageHeight; j++)
 		{
-			Ray x = renderCam.getRay(imageU + (pixelWidth * i), imageV + (pixelHeight * j));
-			
-			ofColor rayColor = trace(x, 0);
+			ofColor rayColor = (0, 0, 0);
+			r = 0;
+			g = 0;
+			b = 0;
+
+			for (float p = 0; p < n ; p++)
+			{
+				for (float q = 0; q < n ; q++)
+				{
+					float AA = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) -.5;
+					float A2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) -.5;
+
+					//printf("%lf", AA);
+					//printf("%lf", A2);
+
+					//float u = i + (pixelWidth + p) / n;	imageU + (pixelWidth * i )
+					//float v = j + (pixelHeight + q) / n;	imageV + (pixelHeight * j )
+					float u = (i + AA) / float(imageWidth);
+					float v = (j + A2) / float(imageHeight);
+					Ray x = renderCam.getRay(u, v);
+
+					rayColor = trace(x, 0);
+
+					
+					r += rayColor.r;
+					g += rayColor.g;
+					b += rayColor.b;
+
+
+					//Negate all the addition of shading 
+					r /= 250;
+					g /= 250;
+					b /= 250;
+				}
+				
+			}
+
+
+
+			//rayColor = rayColor / 9;
+			//img.setColor(i, imageHeight - j - 1, rayColor);
+
+			rayColor = ofFloatColor(r, g, b);
 
 			img.setColor(i, imageHeight - j - 1, rayColor);
 		}
@@ -249,7 +315,7 @@ ofColor ofApp::trace(const Ray &x, int depth) {
 		if (depth < MAX_RAY_DEPTH) {
 			ofVec3f reflectP = reflection(x.d, holdN);
 			Ray reflectionRay = Ray(holdP + reflectP * 0.01 , reflectP);
-			colo += 0.8 * trace(reflectionRay, depth + 1);
+			colo += reflect * trace(reflectionRay, depth + 1);
 		}
 
 
@@ -265,7 +331,7 @@ ofColor ofApp::trace(const Ray &x, int depth) {
 	}
 	
 
-	return ambient(scene[hold]->diffuseColor);
+	//return ambient(scene[hold]->diffuseColor);
 		
 }
 
