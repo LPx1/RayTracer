@@ -232,8 +232,8 @@ void ofApp::rayTrace() {
 					//printf("%lf", AA);
 					//printf("%lf", A2);
 
-					//float u = i + (pixelWidth + p) / n;	imageU + (pixelWidth * i )
-					//float v = j + (pixelHeight + q) / n;	imageV + (pixelHeight * j )
+					//float u = (i + .5) / float(imageWidth);
+					//float v = (j + .5) / float(imageHeight);
 					float u = (i + AA) / float(imageWidth);
 					float v = (j + A2) / float(imageHeight);
 					Ray x = renderCam.getRay(u, v);
@@ -244,24 +244,31 @@ void ofApp::rayTrace() {
 					r += rayColor.r;
 					g += rayColor.g;
 					b += rayColor.b;
-
-
-					//Negate all the addition of shading 
-					r /= 250;
-					g /= 250;
-					b /= 250;
+				
 				}
 				
 			}
 
-
+			r /= 16;
+			g /= 16;
+			b /= 16;
 
 			//rayColor = rayColor / 9;
 			//img.setColor(i, imageHeight - j - 1, rayColor);
 
-			rayColor = ofFloatColor(r, g, b);
+			rayColor = ofColor(r, g, b);
 
 			img.setColor(i, imageHeight - j - 1, rayColor);
+
+
+			//float u = (i + .5) / float(imageWidth);
+			//float v = (j + .5) / float(imageHeight);
+			//Ray x = renderCam.getRay(u, v);
+
+			//ofColor rayColor = trace(x, 0);
+			//img.setColor(i, imageHeight - j - 1, rayColor);
+
+
 		}
 	}
 	img.save("test.jpg");
@@ -307,6 +314,8 @@ ofColor ofApp::trace(const Ray &x, int depth) {
 
 		ofColor colo = (difCol * 0.2);
 
+//		colo += ambient(difCol);
+
 		colo += lambert(holdP, holdN, difCol);
 
 		colo += phong(holdP, holdN, difCol, specCol, phongPower);
@@ -327,7 +336,7 @@ ofColor ofApp::trace(const Ray &x, int depth) {
 	else //If no intersection set the pixel color to black
 	{
 		//img.setColor(i, imageHeight - j - 1, COLOR_BACKGROUND);
-		return COLOR_BACKGROUND;
+		return COLOR_BACKGROUND ;
 	}
 	
 
@@ -346,7 +355,7 @@ ofVec3f ofApp::reflection(const glm::vec3 &dir, const glm::vec3 &norm)
 ofColor ofApp::ambient(const ofColor ambient) {
 	ofColor shading = (0, 0, 0);
 	for (int i = 0; i < lights.size(); i++) {
-		shading += ofFloatColor(ambient * lights[i]->intensity);
+		shading += ofColor(ambient * lights[i]->intensity);
 	}
 
 	return shading;
@@ -374,7 +383,7 @@ ofColor ofApp::lambert(const glm::vec3 &p, const glm::vec3 &norm, const ofColor 
 
 		float cos = fmax(0, glm::dot(l, n)); //  fmax(0, (float) glm::dot(l, n))
 		float inten = (lights[i]->intensity / pow(glm::length(l), 2));
-		pixelColor += ofFloatColor(diffuse * inten * cos);
+		pixelColor += ofColor(diffuse * inten * cos);
 
 		for (int b = 0; b < scene.size(); b++)
 		{
@@ -416,7 +425,7 @@ ofColor ofApp::phong(const glm::vec3 &p, const glm::vec3 &norm, const ofColor di
 		cosAlpha = glm::pow(cosAlpha, power);
 		// Specular Color * Light Intensity * (dotProduct of normal half vector)^power
 
-		pixelColor += ofFloatColor(specular * inten * cosAlpha);
+		pixelColor += ofColor(specular * inten * cosAlpha);
 	}
 	return pixelColor;
 }
