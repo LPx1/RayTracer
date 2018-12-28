@@ -7,6 +7,22 @@ RayTrace result:
 
 ![](https://github.com/LPx1/RayTracing/blob/master/bin/data/RT_Result.jpg)
 
+Lambert Shading:
+
+![](https://github.com/LPx1/RayTracing/blob/master/bin/data/LambertShading.jpg)
+
+Blinn-Phong Shading:
+
+![](https://github.com/LPx1/RayTracing/blob/master/bin/data/Lam%2BPhong_Shading.jpg)
+
+Shadows + Ambient Shading:
+
+![](https://github.com/LPx1/RayTracing/blob/master/bin/data/test.jpg) 
+
+Reflection (Current Version) : 
+
+![](https://github.com/LPx1/RayTracing/blob/master/bin/data/Reflections.jpg) 
+
  
 EDIT 12/18/18 :
 
