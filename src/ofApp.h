@@ -27,6 +27,9 @@
 #include "ofxGui.h"
 
 #define MAX_RAY_DEPTH 3
+#define MAX_RAY_STEPS 200
+#define DIST_THRESHOLD 10
+#define MAX_DISTANCE 300
 
 //  General Purpose Ray class 
 //
@@ -48,6 +51,10 @@ class SceneObject {
 public:
 	virtual void draw() = 0;    // pure virtual funcs - must be overloaded
 	virtual bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) { return false; }
+
+	float sdf(const glm::vec3 &p) {
+		return 0;
+	} // Signed Distance Function (Ray-Marching) 
 
 	// commonly used transformations
 	//
@@ -152,6 +159,12 @@ class Sphere : public SceneObject {
 public:
 	Sphere(glm::vec3 p, float r, ofColor diffuse = ofColor::lightGray) { position = p; radius = r; diffuseColor = diffuse; }
 	Sphere() {}
+
+	float sdf(glm::vec3 p)
+	{
+		float d = glm::length(p) - radius;
+		return d;
+	}
 	bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) {
 		return (glm::intersectRaySphere(ray.p, ray.d, position, radius, point, normal));
 	}
@@ -206,9 +219,11 @@ public:
 		isSelectable = false;
 	}
 
-	//bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) {
-	//	return (glm::intersectRaySphere(ray.p, ray.d, position, radius, point, normal));
-	//}
+	float sdf(glm::vec3 p)
+	{
+		glm::vec3 n = glm::normalize(p);
+		return p.y - plane.getY;
+	}
 
 	glm::vec3 normal = glm::vec3(0, 1, 0);
 	bool intersect(const Ray &ray, glm::vec3 & point, glm::vec3 & normal);
@@ -323,7 +338,6 @@ public:
 	void drawAxis(glm::vec3 position);
 	bool objSelected() { return (selected.size() ? true : false); };
 	bool ofApp::mouseToDragPlane(int x, int y, glm::vec3 &point);
-//	float dotProduct(glm::vec3 lighting, glm::vec3 norm);
 
 	// Formulas function to help generate shading
 	// Functions will return the a color after the color is calculated from the light
@@ -332,6 +346,13 @@ public:
 		const ofColor specular, float power);
 	ofColor ambient(const ofColor ambient);
 	ofVec3f reflection(const glm::vec3 &dir, const glm::vec3 &norm);
+
+
+	// Ray Marching Functions
+	ofColor march(const Ray&ray, int depth);
+	bool rayMarch(Ray r, glm::vec3 p);
+	float sceneSDF(const glm::vec3 p);
+	bool hitRM = false;
 
 
 //	bool bHide = true;
@@ -367,6 +388,8 @@ public:
 	bool child = false;
 	bool rotation = false;
 	bool playback = false;
+	bool rayM = false; 
+
 	glm::vec3 lastPoint;
 
 

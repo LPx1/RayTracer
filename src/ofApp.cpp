@@ -38,7 +38,7 @@ void ofApp::setup() {
 	lights.push_back(new Light(glm::vec3(8, 4, 10), 0.1, intensity2, ofColor::white));
 
 	float dd = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) - .5;
-	printf("%lf", dd);
+//	printf("%lf", dd);
 }
 
 //--------------------------------------------------------------
@@ -198,6 +198,7 @@ void RenderCam::drawFrustum() {
 
 }
 
+// (Also RayMarchLoop)
 void ofApp::rayTrace() {
 
 	phongPower = powSlider;
@@ -226,11 +227,8 @@ void ofApp::rayTrace() {
 			{
 				for (float q = 0; q < n ; q++)
 				{
-					float AA = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) -.5;
+					float AA = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) -.5; //
 					float A2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) -.5;
-
-					//printf("%lf", AA);
-					//printf("%lf", A2);
 
 					//float u = (i + .5) / float(imageWidth);
 					//float v = (j + .5) / float(imageHeight);
@@ -238,9 +236,26 @@ void ofApp::rayTrace() {
 					float v = (j + A2) / float(imageHeight);
 					Ray x = renderCam.getRay(u, v);
 
-					rayColor = trace(x, 0);
+					//If the key M is press for raymarching
+					glm::vec3 point;
 
-					
+
+					if (rayM == true) {
+					//	rayColor = march(x,0);
+						hitRM = rayMarch(x, point); //returns point
+
+						//** Color the point, as compared to Raytracing where you get the color of the pixel. 
+						//Here we grab the point now we have to color it
+
+						// if (hit) shade point
+						// update pixel in image
+
+					}
+					else //otherwise raytrace 
+					{
+						rayColor = trace(x, 0);
+					}
+		
 					r += rayColor.r;
 					g += rayColor.g;
 					b += rayColor.b;
@@ -253,21 +268,9 @@ void ofApp::rayTrace() {
 			g /= 16;
 			b /= 16;
 
-			//rayColor = rayColor / 9;
-			//img.setColor(i, imageHeight - j - 1, rayColor);
-
 			rayColor = ofColor(r, g, b);
 
 			img.setColor(i, imageHeight - j - 1, rayColor);
-
-
-			//float u = (i + .5) / float(imageWidth);
-			//float v = (j + .5) / float(imageHeight);
-			//Ray x = renderCam.getRay(u, v);
-
-			//ofColor rayColor = trace(x, 0);
-			//img.setColor(i, imageHeight - j - 1, rayColor);
-
 
 		}
 	}
@@ -342,6 +345,120 @@ ofColor ofApp::trace(const Ray &x, int depth) {
 
 	//return ambient(scene[hold]->diffuseColor);
 		
+}
+
+
+// Loops through each object in scene and finds closest
+float ofApp::sceneSDF(const glm::vec3 p)
+{
+
+	float closestDistance = glm::length(INFINITY);
+	float d;
+	for (int b = 0; b < scene.size(); b++)
+	{
+		d = scene[b]->sdf(p);
+		if (d < closestDistance)
+		{
+			closestDistance = d;
+		}
+	}
+	return d;
+}
+
+bool ofApp::rayMarch(Ray r, glm::vec3 p)
+{
+	hitRM = false;
+	p = r.p;
+	for (int i = 0; i < MAX_RAY_STEPS; i++)
+	{
+		float dist = sceneSDF(p);
+		if (dist < DIST_THRESHOLD)
+		{
+			hitRM = true;
+			break;
+		}
+		else if (dist > MAX_DISTANCE)
+		{
+			break;
+		}
+		else
+		{
+			p = p + r.d * dist; //keep moving along the ray
+		}
+	}
+}
+
+
+ofColor ofApp::march(const Ray &x, int depth) {
+
+	int hold = -1;
+	glm::vec3 holdP = glm::vec3(0, 0, 0);
+	glm::vec3 holdN = glm::vec3(0, 0, 0);
+
+
+
+	float closest = glm::length(INFINITY); //Grabs the closest intersection, sets to infinity to start
+	//Loops through all objects in scene
+	for (int b = 0; b < scene.size(); b++)
+	{
+		// point of intersection - position of the camera = v 
+		// (v being the distance between the point of intersection and the position of the camera
+		bool intersect = scene[b]->intersect(x, point, normal);
+		float  distance = glm::length(point - renderCam.position);
+
+		//Checks for the closest object
+		if (intersect == true && distance < closest)
+		{
+			hold = b;
+			holdP = point;
+			holdN = normal;
+			closest = distance;
+
+			//ofDrawSphere(point, 1); // For testing intersection on objects 
+		}
+	}
+
+
+	//If ray intersects an object then color it in with the closest objects color otherwise
+	if (hold > -1)
+	{
+		//img.setColor(i, imageHeight - j - 1, scene[hold]->diffuseColor);
+		ofColor difCol = scene[hold]->diffuseColor;
+		ofColor specCol = scene[hold]->specularColor;
+
+		/*Calculates Lambert and Phong shading
+		Sum of all lights is calculated inside each shading function*/
+
+		ofColor colo = (difCol * 0.2);
+
+		//		colo += ambient(difCol);
+
+		colo += lambert(holdP, holdN, difCol);
+
+		colo += phong(holdP, holdN, difCol, specCol, phongPower);
+
+
+		//if (depth < MAX_RAY_DEPTH) {
+		//	ofVec3f reflectP = reflection(x.d, holdN);
+		//	Ray reflectionRay = Ray(holdP + reflectP * 0.01, reflectP);
+		//	colo += reflect * trace(reflectionRay, depth + 1);
+		//}
+
+
+		return colo;
+
+		//	img.setColor(i, imageHeight - j - 1, colo);
+
+	}
+	else //If no intersection set the pixel color to black
+	{
+		//img.setColor(i, imageHeight - j - 1, COLOR_BACKGROUND);
+		return COLOR_BACKGROUND;
+	}
+
+
+	//return ambient(scene[hold]->diffuseColor);
+
 }
 
 //Calculates the reflection off a surface 
@@ -459,7 +576,17 @@ void ofApp::keyPressed(int key) {
 		break;
 	case 'R':
 	case 'r':
+		printf("Raytracing...\n");
 		rayTrace();
+		printf("Done!\n");
+		break;
+	case 'M':
+	case 'm':
+		printf("Raymarching...\n");
+		rayM = true;
+		rayTrace();
+		printf("Done!\n");
+		rayM = false; 
 		break;
 	case ' ': //Dynamically create new objects for rayTracing
 	{		ofColor colors[10] = { ofColor::blue, ofColor::red, ofColor::green,
