@@ -28,8 +28,8 @@
 
 #define MAX_RAY_DEPTH 3
 #define MAX_RAY_STEPS 200
-#define DIST_THRESHOLD 10
-#define MAX_DISTANCE 300
+#define DIST_THRESHOLD .01
+#define MAX_DISTANCE 100
 
 //  General Purpose Ray class 
 //
@@ -52,8 +52,8 @@ public:
 	virtual void draw() = 0;    // pure virtual funcs - must be overloaded
 	virtual bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) { return false; }
 
-	float sdf(const glm::vec3 &p) {
-		return 0;
+	virtual float sdf(const glm::vec3 &p) {
+		return 1000;
 	} // Signed Distance Function (Ray-Marching) 
 
 	// commonly used transformations
@@ -160,9 +160,9 @@ public:
 	Sphere(glm::vec3 p, float r, ofColor diffuse = ofColor::lightGray) { position = p; radius = r; diffuseColor = diffuse; }
 	Sphere() {}
 
-	float sdf(glm::vec3 p)
+	float sdf(const glm::vec3 &p)
 	{
-		float d = glm::length(p) - radius;
+		float d = glm::length(p - position) - radius;
 		return d;
 	}
 	bool intersect(const Ray &ray, glm::vec3 &point, glm::vec3 &normal) {
@@ -219,10 +219,10 @@ public:
 		isSelectable = false;
 	}
 
-	float sdf(glm::vec3 p)
+	float sdf(const glm::vec3 &p)
 	{
 		glm::vec3 n = glm::normalize(p);
-		return p.y - plane.getY;
+		return p.y - plane.getY();
 	}
 
 	glm::vec3 normal = glm::vec3(0, 1, 0);
@@ -354,6 +354,9 @@ public:
 	float sceneSDF(const glm::vec3 p);
 	bool hitRM = false;
 
+	ofColor ofApp::phongRM(const glm::vec3 &p, const glm::vec3 &norm, const ofColor diffuse,
+		const ofColor specular, float power);
+
 
 //	bool bHide = true;
 	bool bShowImage = false;
@@ -373,6 +376,7 @@ public:
 	//
 	RenderCam renderCam;
 	ofImage image;
+	int holdRM;
 
 	vector<SceneObject *> scene;
 	vector<SceneObject *> selected;

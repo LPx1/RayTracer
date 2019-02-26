@@ -28,9 +28,9 @@ void ofApp::setup() {
 	scene.push_back(new Sphere (glm::vec3(-1, 0, -5), 2.0, ofColor::darkBlue));
 	scene.push_back(new Sphere(glm::vec3(4, 0, -4), 2.0, ofColor::crimson));
 //	scene.push_back(new Sphere(glm::vec3(-1, -1, -1), 1.0, ofColor::darkBlue));
-	scene.push_back(new Sphere(glm::vec3(-5, 0, -5), 2.0, ofColor::yellowGreen));
+//	scene.push_back(new Sphere(glm::vec3(-5, 0, -5), 2.0, ofColor::yellowGreen));
     scene.push_back(new Plane(glm::vec3(0, -2, -3), glm::vec3(0, 1, 0),ofColor::lightSlateGray));
-	scene.push_back(new Plane(glm::vec3(0, 8, -3), glm::vec3(0, 1, 0), ofColor::lightSlateGray));
+//	scene.push_back(new Plane(glm::vec3(0, 8, -3), glm::vec3(0, 1, 0), ofColor::lightSlateGray));
 
 
 	lights.push_back(new Light(glm::vec3(0, 4, 10), 0.1 , intensity1 , ofColor::white));
@@ -203,7 +203,7 @@ void ofApp::rayTrace() {
 
 	phongPower = powSlider;
 	int count = 0;
-	int n = 4; //Number of rays to draw in pixel n^2
+	int n = 1; //Number of rays to draw in pixel n^2 //4
 
 	img.allocate(imageWidth, imageHeight, OF_IMAGE_COLOR);
 	// **************************************
@@ -241,8 +241,9 @@ void ofApp::rayTrace() {
 
 
 					if (rayM == true) {
-					//	rayColor = march(x,0);
-						hitRM = rayMarch(x, point); //returns point
+
+						rayColor = march(x,0);
+					//	hitRM = rayMarch(x, point); //returns point
 
 						//** Color the point, as compared to Raytracing where you get the color of the pixel. 
 						//Here we grab the point now we have to color it
@@ -264,9 +265,9 @@ void ofApp::rayTrace() {
 				
 			}
 
-			r /= 16;
-			g /= 16;
-			b /= 16;
+			r /= 1; //16
+			g /= 1;
+			b /= 1;
 
 			rayColor = ofColor(r, g, b);
 
@@ -348,10 +349,9 @@ ofColor ofApp::trace(const Ray &x, int depth) {
 }
 
 
-// Loops through each object in scene and finds closest
+// Loops through each object in scene and finds closest distance to your scene
 float ofApp::sceneSDF(const glm::vec3 p)
 {
-
 	float closestDistance = glm::length(INFINITY);
 	float d;
 	for (int b = 0; b < scene.size(); b++)
@@ -360,9 +360,10 @@ float ofApp::sceneSDF(const glm::vec3 p)
 		if (d < closestDistance)
 		{
 			closestDistance = d;
+			holdRM = b;
 		}
 	}
-	return d;
+	return closestDistance;
 }
 
 bool ofApp::rayMarch(Ray r, glm::vec3 p)
@@ -372,9 +373,10 @@ bool ofApp::rayMarch(Ray r, glm::vec3 p)
 	for (int i = 0; i < MAX_RAY_STEPS; i++)
 	{
 		float dist = sceneSDF(p);
-		if (dist < DIST_THRESHOLD)
+		if (dist < DIST_THRESHOLD) //base case 
 		{
 			hitRM = true;
+			point = p;
 			break;
 		}
 		else if (dist > MAX_DISTANCE)
@@ -386,56 +388,42 @@ bool ofApp::rayMarch(Ray r, glm::vec3 p)
 			p = p + r.d * dist; //keep moving along the ray
 		}
 	}
+	return hitRM;
 }
 
 
 ofColor ofApp::march(const Ray &x, int depth) {
 
 	int hold = -1;
+	bool hit = false;
 	glm::vec3 holdP = glm::vec3(0, 0, 0);
 	glm::vec3 holdN = glm::vec3(0, 0, 0);
 
-
-
-	float closest = glm::length(INFINITY); //Grabs the closest intersection, sets to infinity to start
-	//Loops through all objects in scene
-	for (int b = 0; b < scene.size(); b++)
-	{
-		// point of intersection - position of the camera = v 
-		// (v being the distance between the point of intersection and the position of the camera
-		bool intersect = scene[b]->intersect(x, point, normal);
-		float  distance = glm::length(point - renderCam.position);
-
-		//Checks for the closest object
-		if (intersect == true && distance < closest)
-		{
-			hold = b;
-			holdP = point;
-			holdN = normal;
-			closest = distance;
-
-			//ofDrawSphere(point, 1); // For testing intersection on objects 
-		}
-	}
+	//Will check on ray and rayMarch algorithm occurs here
+	hit = rayMarch(x, point);
+//	printf(point.length);
+	holdP = point;
+	holdN = glm::normalize(point);
+	scene[holdRM]->intersect(x, holdP, holdN);
 
 
 	//If ray intersects an object then color it in with the closest objects color otherwise
-	if (hold > -1)
+	if (hit == true)
 	{
 		//img.setColor(i, imageHeight - j - 1, scene[hold]->diffuseColor);
-		ofColor difCol = scene[hold]->diffuseColor;
-		ofColor specCol = scene[hold]->specularColor;
+		ofColor difCol = scene[holdRM]->diffuseColor;
+		ofColor specCol = scene[holdRM]->specularColor;
 
 		/*Calculates Lambert and Phong shading
 		Sum of all lights is calculated inside each shading function*/
 
-		ofColor colo = (difCol * 0.2);
+		ofColor colo = difCol; //(difCol * 0.2)
 
 		//		colo += ambient(difCol);
 
-		colo += lambert(holdP, holdN, difCol);
+		colo += lambert(holdP, holdN, difCol); //??
 
-		colo += phong(holdP, holdN, difCol, specCol, phongPower);
+		colo += phong(holdP, holdN, difCol, specCol, phongPower); //??
 
 
 		//if (depth < MAX_RAY_DEPTH) {
@@ -522,6 +510,32 @@ ofColor ofApp::lambert(const glm::vec3 &p, const glm::vec3 &norm, const ofColor 
 }
 
 ofColor ofApp::phong(const glm::vec3 &p, const glm::vec3 &norm, const ofColor diffuse,
+	const ofColor specular, float power) {
+	glm::vec3 l;
+	glm::vec3 n;
+	glm::vec3 v;
+	glm::vec3 h;
+
+	ofColor pixelColor = (0, 0, 0); //Sets color to black
+	//Add up the sum of all light effects on pixel (Phong)
+	//
+	for (int i = 0; i < lights.size(); i++) {
+		l = glm::normalize(lights[i]->position - p);
+		n = norm; //Already normalized
+		v = glm::normalize(renderCam.position - p);
+		h = (v + l) / (glm::length(v + l)); //******
+
+		float inten = (lights[i]->intensity / pow(glm::length(l), 2));
+		float cosAlpha = fmax(0, glm::dot(n, h));
+		cosAlpha = glm::pow(cosAlpha, power);
+		// Specular Color * Light Intensity * (dotProduct of normal half vector)^power
+
+		pixelColor += ofColor(specular * inten * cosAlpha);
+	}
+	return pixelColor;
+}
+
+ofColor ofApp::phongRM(const glm::vec3 &p, const glm::vec3 &norm, const ofColor diffuse,
 	const ofColor specular, float power) {
 	glm::vec3 l;
 	glm::vec3 n;
@@ -769,4 +783,3 @@ void ofApp::gotMessage(ofMessage msg) {
 void ofApp::dragEvent(ofDragInfo dragInfo) {
 
 }
-
