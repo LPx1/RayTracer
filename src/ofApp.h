@@ -351,11 +351,17 @@ public:
 	// Ray Marching Functions
 	ofColor march(const Ray&ray, int depth);
 	bool rayMarch(Ray r, glm::vec3 p);
+	bool rayMarchL(Ray r, glm::vec3 p);
 	float sceneSDF(const glm::vec3 p);
+	float lightSDF(const glm::vec3 p);
 	bool hitRM = false;
+	bool lightHit = false;
 
-	ofColor ofApp::phongRM(const glm::vec3 &p, const glm::vec3 &norm, const ofColor diffuse,
+
+	ofColor lambertRM(const glm::vec3 &p, const glm::vec3 &norm, const ofColor diffuse);
+	ofColor phongRM(const glm::vec3 &p, const glm::vec3 &norm, const ofColor diffuse,
 		const ofColor specular, float power);
+	glm::vec3 getNormalRM(const glm::vec3 &p);
 
 
 //	bool bHide = true;

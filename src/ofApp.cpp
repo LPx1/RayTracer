@@ -25,10 +25,10 @@ void ofApp::setup() {
 
 	//Create scene objects 
 	scene.push_back(new Sphere (glm::vec3(2, -1, 0), 1.0, ofColor::gold));
-	scene.push_back(new Sphere (glm::vec3(-1, 0, -5), 2.0, ofColor::darkBlue));
+//	scene.push_back(new Sphere (glm::vec3(-1, 0, -5), 2.0, ofColor::darkBlue));
 	scene.push_back(new Sphere(glm::vec3(4, 0, -4), 2.0, ofColor::crimson));
-//	scene.push_back(new Sphere(glm::vec3(-1, -1, -1), 1.0, ofColor::darkBlue));
-//	scene.push_back(new Sphere(glm::vec3(-5, 0, -5), 2.0, ofColor::yellowGreen));
+	scene.push_back(new Sphere(glm::vec3(-1, -1, -1), 1.0, ofColor::darkBlue));
+	scene.push_back(new Sphere(glm::vec3(-5, 0, -5), 2.0, ofColor::yellowGreen));
     scene.push_back(new Plane(glm::vec3(0, -2, -3), glm::vec3(0, 1, 0),ofColor::lightSlateGray));
 //	scene.push_back(new Plane(glm::vec3(0, 8, -3), glm::vec3(0, 1, 0), ofColor::lightSlateGray));
 
@@ -203,7 +203,7 @@ void ofApp::rayTrace() {
 
 	phongPower = powSlider;
 	int count = 0;
-	int n = 1; //Number of rays to draw in pixel n^2 //4
+	int n = 4; //Number of rays to draw in pixel n^2 //4
 
 	img.allocate(imageWidth, imageHeight, OF_IMAGE_COLOR);
 	// **************************************
@@ -223,6 +223,7 @@ void ofApp::rayTrace() {
 			g = 0;
 			b = 0;
 
+			//Nested for loops for AA, 2^n rays are calculated to take the average color after sampling 16x
 			for (float p = 0; p < n ; p++)
 			{
 				for (float q = 0; q < n ; q++)
@@ -252,7 +253,7 @@ void ofApp::rayTrace() {
 						// update pixel in image
 
 					}
-					else //otherwise raytrace 
+					else //otherwise use raytracing functionality to render our image 
 					{
 						rayColor = trace(x, 0);
 					}
@@ -265,9 +266,9 @@ void ofApp::rayTrace() {
 				
 			}
 
-			r /= 1; //16
-			g /= 1;
-			b /= 1;
+			r /= 16; //16
+			g /= 16;
+			b /= 16;
 
 			rayColor = ofColor(r, g, b);
 
@@ -318,8 +319,6 @@ ofColor ofApp::trace(const Ray &x, int depth) {
 
 		ofColor colo = (difCol * 0.2);
 
-//		colo += ambient(difCol);
-
 		colo += lambert(holdP, holdN, difCol);
 
 		colo += phong(holdP, holdN, difCol, specCol, phongPower);
@@ -330,129 +329,20 @@ ofColor ofApp::trace(const Ray &x, int depth) {
 			Ray reflectionRay = Ray(holdP + reflectP * 0.01 , reflectP);
 			colo += reflect * trace(reflectionRay, depth + 1);
 		}
-
-
 		return colo;
-
-		//	img.setColor(i, imageHeight - j - 1, colo);
-
 	}
 	else //If no intersection set the pixel color to black
 	{
 		//img.setColor(i, imageHeight - j - 1, COLOR_BACKGROUND);
 		return COLOR_BACKGROUND ;
 	}
-	
-
-	//return ambient(scene[hold]->diffuseColor);
-		
-}
-
-
-// Loops through each object in scene and finds closest distance to your scene
-float ofApp::sceneSDF(const glm::vec3 p)
-{
-	float closestDistance = glm::length(INFINITY);
-	float d;
-	for (int b = 0; b < scene.size(); b++)
-	{
-		d = scene[b]->sdf(p);
-		if (d < closestDistance)
-		{
-			closestDistance = d;
-			holdRM = b;
-		}
-	}
-	return closestDistance;
-}
-
-bool ofApp::rayMarch(Ray r, glm::vec3 p)
-{
-	hitRM = false;
-	p = r.p;
-	for (int i = 0; i < MAX_RAY_STEPS; i++)
-	{
-		float dist = sceneSDF(p);
-		if (dist < DIST_THRESHOLD) //base case 
-		{
-			hitRM = true;
-			point = p;
-			break;
-		}
-		else if (dist > MAX_DISTANCE)
-		{
-			break;
-		}
-		else
-		{
-			p = p + r.d * dist; //keep moving along the ray
-		}
-	}
-	return hitRM;
-}
-
-
-ofColor ofApp::march(const Ray &x, int depth) {
-
-	int hold = -1;
-	bool hit = false;
-	glm::vec3 holdP = glm::vec3(0, 0, 0);
-	glm::vec3 holdN = glm::vec3(0, 0, 0);
-
-	//Will check on ray and rayMarch algorithm occurs here
-	hit = rayMarch(x, point);
-//	printf(point.length);
-	holdP = point;
-	holdN = glm::normalize(point);
-	scene[holdRM]->intersect(x, holdP, holdN);
-
-
-	//If ray intersects an object then color it in with the closest objects color otherwise
-	if (hit == true)
-	{
-		//img.setColor(i, imageHeight - j - 1, scene[hold]->diffuseColor);
-		ofColor difCol = scene[holdRM]->diffuseColor;
-		ofColor specCol = scene[holdRM]->specularColor;
-
-		/*Calculates Lambert and Phong shading
-		Sum of all lights is calculated inside each shading function*/
-
-		ofColor colo = difCol; //(difCol * 0.2)
-
-		//		colo += ambient(difCol);
-
-		colo += lambert(holdP, holdN, difCol); //??
-
-		colo += phong(holdP, holdN, difCol, specCol, phongPower); //??
-
-
-		//if (depth < MAX_RAY_DEPTH) {
-		//	ofVec3f reflectP = reflection(x.d, holdN);
-		//	Ray reflectionRay = Ray(holdP + reflectP * 0.01, reflectP);
-		//	colo += reflect * trace(reflectionRay, depth + 1);
-		//}
-
-
-		return colo;
-
-		//	img.setColor(i, imageHeight - j - 1, colo);
-
-	}
-	else //If no intersection set the pixel color to black
-	{
-		//img.setColor(i, imageHeight - j - 1, COLOR_BACKGROUND);
-		return COLOR_BACKGROUND;
-	}
-
-
-	//return ambient(scene[hold]->diffuseColor);
 
 }
 
 //Calculates the reflection off a surface 
 ofVec3f ofApp::reflection(const glm::vec3 &dir, const glm::vec3 &norm)
 {
-	return dir - 2 *  norm * glm::dot(dir, norm);
+	return dir - 2 * norm * glm::dot(dir, norm);
 }
 
 // Calculate ambient shading 
@@ -532,6 +422,145 @@ ofColor ofApp::phong(const glm::vec3 &p, const glm::vec3 &norm, const ofColor di
 
 		pixelColor += ofColor(specular * inten * cosAlpha);
 	}
+	return pixelColor;
+}
+
+
+/* ------------------------------------------- RAYMARCHING FUNCTIONS -------------------------------------------*/
+
+
+
+// Loops through each object in scene and finds closest distance to the scene
+float ofApp::sceneSDF(const glm::vec3 p)
+{
+	float closestDistance = glm::length(INFINITY);
+	float d;
+	for (int b = 0; b < scene.size(); b++)
+	{
+		d = scene[b]->sdf(p);
+		if (d < closestDistance)
+		{
+			closestDistance = d;
+			holdRM = b;
+		}
+	}
+	return closestDistance;
+}
+
+bool ofApp::rayMarch(Ray r, glm::vec3 p)
+{
+	hitRM = false;
+	p = r.p;
+	for (int i = 0; i < MAX_RAY_STEPS; i++)
+	{
+		float dist = sceneSDF(p);
+		if (dist < DIST_THRESHOLD) //base case 
+		{
+			hitRM = true;
+			point = p;
+			break;
+		}
+		else if (dist > MAX_DISTANCE)
+		{
+			break;
+		}
+		else
+		{
+			p = p + r.d * dist; //keep moving along the ray
+		}
+	}
+	return hitRM;
+}
+
+ofColor ofApp::march(const Ray &x, int depth) {
+
+	int hold = -1;
+	bool hit = false;
+	glm::vec3 holdP = glm::vec3(0, 0, 0);
+	glm::vec3 holdN = glm::vec3(0, 0, 0);
+
+	//Will check on ray and rayMarch algorithm occurs herE
+	hit = rayMarch(x, point);
+	holdP = point;
+	holdN = getNormalRM(point);
+
+	//If ray has a hit then will color that specific point and apply shading to it
+	if (hit == true)
+	{
+		//img.setColor(i, imageHeight - j - 1, scene[hold]->diffuseColor);
+		ofColor difCol = scene[holdRM]->diffuseColor;
+		ofColor specCol = scene[holdRM]->specularColor;
+
+		/*Calculates Lambert and Phong shading
+		Sum of all lights is calculated inside each shading function*/
+
+		ofColor colo = difCol * 0.2; 
+
+		colo += lambertRM(holdP, holdN, difCol); 
+
+		colo += phongRM(holdP, holdN, difCol, specCol, phongPower);
+
+
+		//if (depth < MAX_RAY_DEPTH) {
+		//	ofVec3f reflectP = reflection(x.d, holdN);
+		//	Ray reflectionRay = Ray(holdP + reflectP * 0.01, reflectP);
+		//	colo += reflect * trace(reflectionRay, depth + 1);
+		//}
+
+
+		return colo;
+
+	}
+	else //If no intersection set the pixel color to black
+	{
+		return COLOR_BACKGROUND;
+	}
+
+}
+
+	glm::vec3  ofApp::getNormalRM(const glm::vec3 &p) {
+
+	float eps = .01;
+	float dp = sceneSDF(p);
+
+	glm::vec3 norm(dp - sceneSDF(glm::vec3(p.x - eps, p.y, p.z)),
+					dp - sceneSDF(glm::vec3(p.x, p.y - eps, p.z)),
+					dp - sceneSDF(glm::vec3(p.x, p.y, p.z - eps)));
+	
+	return glm::normalize(norm);
+}
+
+ofColor ofApp::lambertRM(const glm::vec3 &p, const glm::vec3 &norm, const ofColor diffuse) {
+	ofColor pixelColor = (0, 0, 0); //Sets to black
+	ofColor difTotal;
+
+	glm::vec3 l;
+	glm::vec3 n;
+	glm::vec3 poi, nor; //point and normal
+	bool intersec;
+
+	//Add up the sum of all light effects on pixel (Lambert)
+	//
+	for (int i = 0; i < lights.size(); i++) {
+
+		l = glm::normalize(lights[i]->position - p); // glm::normalize(lights[0]->position - p)
+		n = norm; //Already normalized
+		Ray shadow = Ray(p + glm::vec3(1, 1, 1), l);
+
+		float cos = fmax(0, glm::dot(l, n)); //  fmax(0, (float) glm::dot(l, n))
+		float inten = (lights[i]->intensity / pow(glm::length(l), 2));
+		pixelColor += ofColor(diffuse * inten * cos);
+
+		intersec = rayMarch(shadow, p);
+
+		//If there is no object in the way of the light there color that with diffuse
+		//else if there is an object in the way color that black
+		if (intersec == true) {
+			return pixelColor = (10, 10, 10);
+		}
+	}
+
+	//Surface color * Light Intensity * dotProdut of Light and Normal
 	return pixelColor;
 }
 
